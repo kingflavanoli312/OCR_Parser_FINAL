@@ -3,10 +3,11 @@ import { ImageViewer } from '@/components/ImageViewer';
 import { TagManager } from '@/components/TagManager';
 import { FileUpload } from '@/components/FileUpload';
 import { HistoryPanel } from '@/components/HistoryPanel';
+import { ResumeViewer } from '@/components/ResumeViewer';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { FileImage, Tags, History, Upload } from 'lucide-react';
+import { FileImage, Tags, History, Upload, FileUser } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BoundingBox {
@@ -31,14 +32,19 @@ const Index = () => {
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<BoundingBox | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
   const [activeTab, setActiveTab] = useState('upload');
+  const [showResumeViewer, setShowResumeViewer] = useState(false);
+  const [currentFileName, setCurrentFileName] = useState<string>('');
 
   const handleFileSelect = (file: UploadedFile) => {
     if (file.type === 'image' && file.preview) {
       setCurrentImage(file.preview);
       setActiveTab('viewer');
       toast.success('Image loaded successfully');
-    } else {
-      toast.info('Document uploaded - PDF/DOCX processing will be available soon');
+    } else if (file.type === 'pdf' || file.type === 'docx') {
+      setCurrentFileName(file.file.name);
+      setShowResumeViewer(true);
+      setActiveTab('resume');
+      toast.success(`${file.type.toUpperCase()} processed successfully`);
     }
   };
 
@@ -101,7 +107,7 @@ const Index = () => {
           {/* Left Panel - Navigation & Controls */}
           <div className="lg:col-span-1">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="grid w-full grid-cols-4 mb-4">
                 <TabsTrigger value="upload" className="gap-2">
                   <Upload className="w-4 h-4" />
                   Upload
@@ -109,6 +115,10 @@ const Index = () => {
                 <TabsTrigger value="tags" className="gap-2">
                   <Tags className="w-4 h-4" />
                   Tags
+                </TabsTrigger>
+                <TabsTrigger value="resume" className="gap-2">
+                  <FileUser className="w-4 h-4" />
+                  Resume
                 </TabsTrigger>
                 <TabsTrigger value="history" className="gap-2">
                   <History className="w-4 h-4" />
@@ -131,6 +141,27 @@ const Index = () => {
                   />
                 </TabsContent>
 
+                <TabsContent value="resume" className="h-full m-0">
+                  {showResumeViewer ? (
+                    <ResumeViewer 
+                      fileName={currentFileName}
+                      onExport={(format) => {
+                        console.log(`Exported resume data as ${format}`);
+                      }}
+                    />
+                  ) : (
+                    <Card className="p-8 text-center h-full flex items-center justify-center">
+                      <div>
+                        <FileUser className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                        <h3 className="text-lg font-medium mb-2">No Resume Processed</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Upload a PDF or DOCX file to view parsed resume data
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+                </TabsContent>
+
                 <TabsContent value="history" className="h-full m-0">
                   <HistoryPanel
                     onViewDocument={(entry) => {
@@ -145,13 +176,24 @@ const Index = () => {
             </Tabs>
           </div>
 
-          {/* Right Panel - Image Viewer */}
+          {/* Right Panel - Content Viewer */}
           <div className="lg:col-span-3">
-            <ImageViewer
-              imageUrl={currentImage}
-              onBoundingBoxSelect={handleBoundingBoxSelect}
-              onOCRExtract={handleOCRExtract}
-            />
+            {activeTab === 'resume' && showResumeViewer ? (
+              <Card className="h-full">
+                <ResumeViewer 
+                  fileName={currentFileName}
+                  onExport={(format) => {
+                    console.log(`Exported resume data as ${format}`);
+                  }}
+                />
+              </Card>
+            ) : (
+              <ImageViewer
+                imageUrl={currentImage}
+                onBoundingBoxSelect={handleBoundingBoxSelect}
+                onOCRExtract={handleOCRExtract}
+              />
+            )}
           </div>
         </div>
       </div>
